@@ -13,7 +13,7 @@ if (!_flutter) {
 }
 _flutter.loader = null;
 
-(function() {
+(function () {
   "use strict";
   class FlutterLoader {
     // TODO: Move the below methods to "#private" once supported by all the browsers
@@ -26,16 +26,13 @@ _flutter.loader = null;
     _didCreateEngineInitializerResolve = null;
 
     /**
-     * Initializes the main.dart.js with/without serviceWorker.
+     * Initializes the main.dart.js with/without serviceWorker
      * @param {*} options
      * @returns a Promise that will eventually resolve with an EngineInitializer,
      * or will be rejected with the error caused by the loader.
      */
     loadEntrypoint(options) {
-      const {
-        entrypointUrl = "main.dart.js",
-        serviceWorker,
-      } = (options || {});
+      const { entrypointUrl = "main.dart.js", serviceWorker } = options || {};
       return this._loadWithServiceWorker(entrypointUrl, serviceWorker);
     }
 
@@ -45,14 +42,16 @@ _flutter.loader = null;
      * the JS <-> Flutter jumps.
      * @param {*} engineInitializer
      */
-    didCreateEngineInitializer = (function(engineInitializer) {
+    didCreateEngineInitializer = function (engineInitializer) {
       if (typeof this._didCreateEngineInitializerResolve != "function") {
-        console.warn("Do not call didCreateEngineInitializer by hand. Start with loadEntrypoint instead.");
+        console.warn(
+          "Do not call didCreateEngineInitializer by hand. Start with loadEntrypoint instead."
+        );
       }
       this._didCreateEngineInitializerResolve(engineInitializer);
-      // Remove this method after it's done, so Flutter Web can hot restart.
+      // Remove this method after it is done, so Flutter Web can hot restart
       delete this.didCreateEngineInitializer;
-    }).bind(this);
+    }.bind(this);
 
     _loadEntrypoint(entrypointUrl) {
       if (!this._scriptLoaded) {
@@ -72,7 +71,9 @@ _flutter.loader = null;
     _waitForServiceWorkerActivation(serviceWorker, entrypointUrl) {
       if (!serviceWorker || serviceWorker.state == "activated") {
         if (!serviceWorker) {
-          console.warn("Cannot activate a null service worker. Falling back to plain <script> tag.");
+          console.warn(
+            "Cannot activate a null service worker. Falling back to plain <script> tag."
+          );
         } else {
           console.debug("Service worker already active.");
         }
@@ -90,38 +91,41 @@ _flutter.loader = null;
 
     _loadWithServiceWorker(entrypointUrl, serviceWorkerOptions) {
       if (!("serviceWorker" in navigator) || serviceWorkerOptions == null) {
-        console.warn("Service worker not supported (or configured). Falling back to plain <script> tag.", serviceWorkerOptions);
+        console.warn(
+          "Service worker not supported (or configured). Falling back to plain <script> tag.",
+          serviceWorkerOptions
+        );
         return this._loadEntrypoint(entrypointUrl);
       }
 
-      const {
-        serviceWorkerVersion,
-        timeoutMillis = 4000,
-      } = serviceWorkerOptions;
+      const { serviceWorkerVersion, timeoutMillis = 4000 } =
+        serviceWorkerOptions;
 
-      let serviceWorkerUrl = "flutter_service_worker.js?v=" + serviceWorkerVersion;
-      let loader = navigator.serviceWorker.register(serviceWorkerUrl)
-          .then((reg) => {
-            if (!reg.active && (reg.installing || reg.waiting)) {
-              // No active web worker and we have installed or are installing
-              // one for the first time. Simply wait for it to activate.
-              let sw = reg.installing || reg.waiting;
+      let serviceWorkerUrl =
+        "flutter_service_worker.js?v=" + serviceWorkerVersion;
+      let loader = navigator.serviceWorker
+        .register(serviceWorkerUrl)
+        .then((reg) => {
+          if (!reg.active && (reg.installing || reg.waiting)) {
+            // No active web worker and we have installed or are installing
+            // one for the first time. Simply wait for it to activate.
+            let sw = reg.installing || reg.waiting;
+            return this._waitForServiceWorkerActivation(sw, entrypointUrl);
+          } else if (!reg.active.scriptURL.endsWith(serviceWorkerVersion)) {
+            // When the app updates the serviceWorkerVersion changes, so we
+            // need to ask the service worker to update.
+            console.debug("New service worker available.");
+            return reg.update().then((reg) => {
+              console.debug("Service worker updated.");
+              let sw = reg.installing || reg.waiting || reg.active;
               return this._waitForServiceWorkerActivation(sw, entrypointUrl);
-            } else if (!reg.active.scriptURL.endsWith(serviceWorkerVersion)) {
-              // When the app updates the serviceWorkerVersion changes, so we
-              // need to ask the service worker to update.
-              console.debug("New service worker available.");
-              return reg.update().then((reg) => {
-                console.debug("Service worker updated.");
-                let sw = reg.installing || reg.waiting || reg.active;
-                return this._waitForServiceWorkerActivation(sw, entrypointUrl);
-              });
-            } else {
-              // Existing service worker is still good.
-              console.debug("Loading app from service worker.");
-              return this._loadEntrypoint(entrypointUrl);
-            }
-          });
+            });
+          } else {
+            // Existing service worker is still good.
+            console.debug("Loading app from service worker.");
+            return this._loadEntrypoint(entrypointUrl);
+          }
+        });
 
       // Timeout race promise
       let timeout;
@@ -129,7 +133,9 @@ _flutter.loader = null;
         timeout = new Promise((resolve, _) => {
           setTimeout(() => {
             if (!this._scriptLoaded) {
-              console.warn("Failed to load app from service worker. Falling back to plain <script> tag.");
+              console.warn(
+                "Failed to load app from service worker. Falling back to plain <script> tag."
+              );
               resolve(this._loadEntrypoint(entrypointUrl));
             }
           }, timeoutMillis);
@@ -141,4 +147,4 @@ _flutter.loader = null;
   }
 
   _flutter.loader = new FlutterLoader();
-}());
+})();
